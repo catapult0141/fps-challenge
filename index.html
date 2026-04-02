@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Can you spot the FPS?</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f9f9f7;color:#111;min-height:100vh}
+#app{max-width:640px;margin:0 auto;padding:2rem 1.25rem;min-height:100vh}
+.screen{display:none}.screen.active{display:block}
+h1{font-size:26px;font-weight:500;margin-bottom:6px}
+.sub{font-size:14px;color:#666;margin-bottom:1.5rem;line-height:1.6}
+.btn{display:inline-block;padding:10px 22px;border-radius:8px;border:1px solid #ccc;background:#fff;color:#111;font-size:14px;cursor:pointer;transition:all .15s;font-family:inherit}
+.btn:hover{background:#f0f0ee}.btn:active{transform:scale(.98)}
+.btn.primary{background:#111;color:#fff;border-color:#111}.btn.primary:hover{opacity:.85}
+.mode-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.5rem}
+.mode-card{border:1px solid #e0e0dc;border-radius:12px;padding:1.25rem;cursor:pointer;transition:all .15s;background:#fff}
+.mode-card:hover{border-color:#999;background:#fafaf8}
+.mode-card h3{font-size:15px;font-weight:500;margin-bottom:4px}
+.mode-card p{font-size:12px;color:#666;line-height:1.5}
+.mode-icon{font-size:18px;margin-bottom:8px;letter-spacing:2px}
+.hz-bar{background:#f0f0ee;border:1px solid #e0e0dc;border-radius:8px;padding:10px 14px;font-size:13px;color:#555;margin-bottom:1.25rem}
+.hz-bar b{color:#111;font-weight:500}
+.hz-options{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.round-info{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.rlbl{font-size:13px;color:#666}
+.slbl{font-size:13px;font-weight:500}
+.prog{height:3px;background:#e0e0dc;border-radius:2px;margin-bottom:1.25rem}
+.prog-fill{height:100%;background:#111;border-radius:2px;transition:width .3s}
+.qcard{border:1px solid #e0e0dc;border-radius:12px;padding:1.25rem;background:#fff;margin-bottom:1rem}
+.qtxt{font-size:15px;font-weight:500;margin-bottom:4px}
+.qhint{font-size:12px;color:#666;margin-bottom:1.1rem;line-height:1.5}
+.grid4{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem}
+.panel{border-radius:8px;overflow:hidden;border:1px solid #e0e0dc;cursor:pointer;transition:border .12s;background:#fff}
+.panel:hover{border-color:#999}
+.panel.reveal-correct{border:2px solid #3B6D11;box-shadow:0 0 0 2px #3B6D1122}
+.panel.answered-correct{border:2px solid #3B6D11;box-shadow:0 0 0 2px #3B6D1122}
+.panel.answered-wrong{border:2px solid #A32D2D;box-shadow:0 0 0 2px #A32D2D22}
+.panel canvas{display:block;width:100%}
+.plabel{font-size:11px;font-weight:500;text-align:center;padding:5px;color:#666;background:#f5f5f3;border-top:1px solid #e8e8e4}
+.ptag{font-size:10px;color:#999;text-align:center;padding:2px 4px;font-style:italic;background:#f5f5f3}
+.svid{max-width:300px;margin:0 auto 1.1rem}
+.vbox{border-radius:8px;overflow:hidden;border:1px solid #e0e0dc}
+.stag{font-size:10px;color:#999;text-align:center;padding:3px;font-style:italic;background:#f5f5f3}
+.gchoices{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cbtn{padding:10px 6px;border-radius:8px;border:1px solid #e0e0dc;background:#f5f5f3;color:#111;font-size:13px;cursor:pointer;transition:all .15s;font-family:inherit;text-align:center}
+.cbtn:hover:not(:disabled){border-color:#999;background:#fff}
+.cbtn.correct{background:#EAF3DE;border-color:#3B6D11;color:#27500A}
+.cbtn.wrong{background:#FCEBEB;border-color:#A32D2D;color:#791F1F}
+.feedback{padding:10px 14px;border-radius:8px;font-size:13px;margin-top:1rem;display:none;line-height:1.5}
+.feedback.correct{background:#EAF3DE;color:#27500A;border:1px solid #639922}
+.feedback.wrong{background:#FCEBEB;color:#791F1F;border:1px solid #A32D2D}
+.nextrow{margin-top:1rem;text-align:right}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:1.25rem 0}
+.sc{background:#f5f5f3;border-radius:8px;padding:1rem;text-align:center}
+.sn{font-size:26px;font-weight:500}
+.sl{font-size:11px;color:#666;margin-top:2px}
+.ssbox{border:1px solid #e0e0dc;border-radius:12px;padding:1.25rem;margin-bottom:1.25rem;background:#fff}
+.sstitle{font-size:13px;color:#666;margin-bottom:4px}
+.ssval{font-size:28px;font-weight:500;margin-bottom:6px}
+.ssdesc{font-size:13px;color:#555;line-height:1.5}
+.fps-scale{display:flex;margin:1.25rem 0;border-radius:8px;overflow:hidden;border:1px solid #e0e0dc}
+.fps-seg{flex:1;padding:7px 2px;text-align:center;font-size:10px;border-right:1px solid #e0e0dc}
+.fps-seg:last-child{border-right:none}
+.fps-seg.ct{background:#EAF3DE;color:#27500A}
+.fps-seg.nc{background:#FCEBEB;color:#791F1F}
+.fps-seg.ab{background:#f5f5f3;color:#aaa}
+.fps-seg.ut{background:#f5f5f3;color:#888}
+.legend{display:flex;gap:14px;margin-bottom:.6rem;flex-wrap:wrap}
+.li{display:flex;align-items:center;gap:5px;font-size:11px;color:#666}
+.ld{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+.bdown{border:1px solid #e0e0dc;border-radius:12px;overflow:hidden;margin-bottom:1.25rem}
+.brow{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;font-size:12px;border-bottom:1px solid #e8e8e4;gap:8px}
+.brow:last-child{border-bottom:none}
+.brow.cr{background:#EAF3DE}.brow.wr{background:#FCEBEB}
+.bl{color:#666;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.br{font-weight:500;white-space:nowrap}
+.br.c{color:#27500A}.br.w{color:#791F1F}
+canvas{display:block;width:100%}
+</style>
+</head>
+<body>
+<div id="app">
+
+<div id="setup" class="screen active">
+  <h1>Can you spot the FPS?</h1>
+  <p class="sub">Test whether you can actually tell framerates apart — and find your perceptual sweet spot.</p>
+  <div class="hz-bar" id="hz-bar">Detecting your screen refresh rate...</div>
+  <div id="hz-prompt-area"></div>
+  <div id="mode-section" style="display:none">
+    <div class="mode-cards" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="mode-card" onclick="startGame('30v60')">
+        <div class="mode-icon">&#9654;</div>
+        <h3>30 vs 60</h3>
+        <p>The classic test. Four scenes play — three at 30fps, one at 60fps. Find the smooth one.</p>
+      </div>
+      <div class="mode-card" onclick="startGame('oddone')">
+        <div class="mode-icon">&#9633;&#9633;&#9632;&#9633;</div>
+        <h3>Odd one out</h3>
+        <p>Four scenes play at once. Three share the same FPS — find the one running at a higher framerate.</p>
+      </div>
+      <div class="mode-card" onclick="startGame('guess')">
+        <div class="mode-icon">&#63;</div>
+        <h3>Guess the FPS</h3>
+        <p>One animation plays. Four FPS options shown — pick the one it's actually running at.</p>
+      </div>
+    </div>
+    <p style="font-size:12px;color:#888">10 rounds &middot; 20-scene pool &middot; Sweet spot analysis at the end</p>
+  </div>
+</div>
+
+<div id="game" class="screen">
+  <div class="round-info">
+    <span class="rlbl" id="rlbl">Round 1 of 10</span>
+    <span class="slbl" id="slbl">Score: 0</span>
+  </div>
+  <div class="prog"><div class="prog-fill" id="pfill" style="width:0%"></div></div>
+  <div class="qcard">
+    <div class="qtxt" id="qtxt"></div>
+    <div class="qhint" id="qhint"></div>
+    <div id="oddone-area" style="display:none"><div class="grid4" id="grid4"></div></div>
+    <div id="guess-area" style="display:none">
+      <div class="svid"><div class="vbox"><canvas id="cs" height="180"></canvas></div><div class="stag" id="stag"></div></div>
+      <div class="gchoices" id="gchoices" style="grid-template-columns:1fr 1fr"></div>
+    </div>
+    <div class="feedback" id="fb"></div>
+  </div>
+  <div class="nextrow" id="nextrow" style="display:none">
+    <button class="btn primary" id="nbtn" onclick="nextRound()">Next round &rarr;</button>
+  </div>
+</div>
+
+<div id="results" class="screen">
+  <h1>Results</h1>
+
+  <!-- 30v60 results -->
+  <div id="res-30v60" style="display:none">
+    <div class="ssbox">
+      <div class="sstitle">Can you tell 30fps from 60fps?</div>
+      <div class="ssval" id="verdict-30v60"></div>
+      <div class="ssdesc" id="desc-30v60"></div>
+    </div>
+    <div class="stats">
+      <div class="sc"><div class="sn" id="rc-30v60"></div><div class="sl">Correct</div></div>
+      <div class="sc"><div class="sn" id="pct-30v60"></div><div class="sl">Accuracy</div></div>
+      <div class="sc"><div class="sn" id="rs-30v60"></div><div class="sl">Best streak</div></div>
+    </div>
+    <div class="bdown" id="bdown-30v60"></div>
+  </div>
+
+  <!-- oddone / guess results -->
+  <div id="res-general" style="display:none">
+    <div class="ssbox">
+      <div class="sstitle">Your FPS sweet spot</div>
+      <div class="ssval" id="ssval"></div>
+      <div class="ssdesc" id="ssdesc"></div>
+    </div>
+    <div class="legend">
+      <div class="li"><div class="ld" style="background:#EAF3DE;border:1px solid #3B6D11"></div>Can tell apart</div>
+      <div class="li"><div class="ld" style="background:#FCEBEB;border:1px solid #A32D2D"></div>Can't tell apart</div>
+      <div class="li"><div class="ld" style="background:#f5f5f3;border:1px solid #ddd"></div>Above screen / untested</div>
+    </div>
+    <div class="fps-scale" id="fps-scale"></div>
+    <div class="stats">
+      <div class="sc"><div class="sn" id="rc"></div><div class="sl">Correct</div></div>
+      <div class="sc"><div class="sn" id="rt"></div><div class="sl">Rounds</div></div>
+      <div class="sc"><div class="sn" id="rs"></div><div class="sl">Best streak</div></div>
+    </div>
+    <div class="bdown" id="bdown"></div>
+  </div>
+
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:1.25rem">
+    <button class="btn primary" onclick="startGame(currentMode)">Play again</button>
+    <button class="btn" onclick="goHome()">Change mode</button>
+  </div>
+</div>
+
+</div>
+<script>
+const ALLFPS=[24,30,48,60,75,120,144,240];
+const TOTAL=10;
+const LABELS=['A','B','C','D'];
+let maxHz=75,currentMode='oddone',round=0,score=0,streak=0,best=0;
+let rounds=[],afs=[],answered=false,pairRes={};
+
+function detectHz(){
+  return new Promise(res=>{
+    const s=[];let last=null,n=0;
+    function f(ts){
+      if(last!==null)s.push(ts-last);
+      last=ts;
+      if(++n<200)requestAnimationFrame(f);
+      else{
+        // Drop top and bottom 10% of samples to remove outliers
+        const sorted=s.slice().sort((a,b)=>a-b);
+        const trim=Math.floor(sorted.length*0.1);
+        const trimmed=sorted.slice(trim,sorted.length-trim);
+        const avg=trimmed.reduce((a,b)=>a+b)/trimmed.length;
+        res(Math.round(1000/avg));
+      }
+    }
+    requestAnimationFrame(f);
+  });
+}
+
+function snapHz(hz){
+  // Full list of real-world refresh rates including oddities like 66/72
+  const known=[24,30,48,50,60,66,72,75,90,100,120,144,165,180,240,360];
+  const snapped=known.reduce((a,b)=>Math.abs(b-hz)<Math.abs(a-hz)?b:a);
+  // Map to nearest value we actually support in ALLFPS
+  return ALLFPS.includes(snapped)?snapped:ALLFPS.reduce((a,b)=>Math.abs(b-hz)<Math.abs(a-hz)?b:a);
+}
+
+function showHzBar(detected,snapped){
+  const changeLink=`<a href="#" onclick="showHzPrompt(${detected});return false;" style="color:#555;font-size:12px;margin-left:8px;text-decoration:underline">Not right? Change it</a>`;
+  document.getElementById('hz-bar').innerHTML=
+    `Screen refresh rate: <b>${detected}Hz detected</b>${detected!==snapped?` &rarr; using <b>${snapped}Hz</b>`:''}.  Animations cap here; questions may reference higher values.${changeLink}`;
+}
+
+async function init(){
+  const hz=await detectHz();
+  maxHz=snapHz(hz);
+  showHzBar(hz,maxHz);
+  document.getElementById('mode-section').style.display='';
+}
+
+function showHzPrompt(detected){
+  document.getElementById('hz-prompt-area').innerHTML=
+    `<p style="font-size:13px;color:#666;margin-bottom:8px">Select your screen&rsquo;s actual refresh rate:</p>`+
+    `<div class="hz-options">${[48,60,75,90,120,144,165,240].map(h=>`<button class="btn" onclick="setHz(${h},${detected})">${h}Hz</button>`).join('')}`+
+    `<button class="btn" onclick="setHz(60,${detected})">Not sure</button></div>`;
+}
+function setHz(hz,detected){
+  maxHz=snapHz(hz);
+  document.getElementById('hz-prompt-area').innerHTML='';
+  showHzBar(detected,maxHz);
+}
+
+const scenes=[
+  {n:'Bouncing balls',     f:(c,t,w,h)=>{c.fillStyle='#1a1a2e';c.fillRect(0,0,w,h);[{r:18,ox:.28,vx:.7,vy:.5,col:'#e94560'},{r:13,ox:.65,vx:-.5,vy:.8,col:'#2288cc'},{r:15,ox:.5,vx:.6,vy:-.6,col:'#9933bb'}].forEach((b,i)=>{const x=((b.ox*w+t*100*b.vx)%(w+b.r*4))-b.r*2;const y=(Math.sin(t*1.5+i)*.38+.5)*h;c.beginPath();c.arc(x<0?x+w+b.r*4:x,y,b.r,0,Math.PI*2);c.fillStyle=b.col;c.fill();});}},
+  {n:'Spinning squares',   f:(c,t,w,h)=>{c.fillStyle='#0d1117';c.fillRect(0,0,w,h);const cx=w/2,cy=h/2;[0,1,2].forEach(i=>{const a=t*(1.4+i*.65)+(i*Math.PI*2/3),r=24+i*17;c.save();c.translate(cx,cy);c.rotate(a);c.fillStyle=['#ff6b6b','#4ecdc4','#ffe66d'][i];c.fillRect(-r/2,-r/2,r,r);c.restore();});}},
+  {n:'Particle stream',    f:(c,t,w,h)=>{c.fillStyle='rgba(8,8,18,.35)';c.fillRect(0,0,w,h);for(let i=0;i<10;i++){const s=i*1.4,x=((s*89+t*(22+i*4))%w),y=(Math.sin(t*1.8+s)*.42+.5)*h,sz=2.5+Math.sin(t*3+s)*2;c.beginPath();c.arc(x,y,sz,0,Math.PI*2);c.fillStyle=`hsl(${(s*55+t*28)%360},82%,65%)`;c.fill();}}},
+  {n:'Scrolling grid',     f:(c,t,w,h)=>{c.fillStyle='#111';c.fillRect(0,0,w,h);const off=(t*75)%40;c.strokeStyle='#1e2e1e';c.lineWidth=1;for(let x=-40+off;x<w+40;x+=40){c.beginPath();c.moveTo(x,0);c.lineTo(x,h);c.stroke();}for(let y=0;y<h;y+=40){c.beginPath();c.moveTo(0,y);c.lineTo(w,y);c.stroke();}const cx=w/2+Math.sin(t*.9)*w*.26,cy=h/2+Math.cos(t*.65)*h*.22;c.beginPath();c.arc(cx,cy,15,0,Math.PI*2);c.fillStyle='#39ff14';c.fill();}},
+  {n:'Wave pendulum',      f:(c,t,w,h)=>{c.fillStyle='#0a0a1a';c.fillRect(0,0,w,h);for(let i=0;i<12;i++){const a=t*(.5+i*.14)+i*.3,len=42-i*1.2,x=(i/12)*w*.85+w*.07,cy=h/2,py=cy+Math.cos(a)*len;c.beginPath();c.moveTo(x,cy);c.lineTo(x,py);c.strokeStyle=`hsl(${195+i*10},80%,62%)`;c.lineWidth=2.5;c.stroke();c.beginPath();c.arc(x,py,4,0,Math.PI*2);c.fillStyle=`hsl(${195+i*10},80%,78%)`;c.fill();}}},
+  {n:'Racing lines',       f:(c,t,w,h)=>{c.fillStyle='#100808';c.fillRect(0,0,w,h);[.18,.38,.58,.78].forEach((frac,i)=>{const spd=50+i*42,x=(t*spd*(i%2?1.25:1))%(w+55)-55;c.beginPath();c.moveTo(x,frac*h);c.lineTo(x+34,frac*h);c.strokeStyle=['#ff4444','#44aaff','#ffaa22','#44ff88'][i];c.lineWidth=6;c.lineCap='round';c.stroke();});}},
+  {n:'Orbit system',       f:(c,t,w,h)=>{c.fillStyle='#050510';c.fillRect(0,0,w,h);const cx=w/2,cy=h/2;c.beginPath();c.arc(cx,cy,7,0,Math.PI*2);c.fillStyle='#ffe090';c.fill();[[22,1.25,'#4af'],[36,.72,'#fa4'],[50,.42,'#4f8']].forEach(([r,spd,col])=>{const a=t*spd,x=cx+Math.cos(a)*r,y=cy+Math.sin(a)*r;c.beginPath();c.arc(cx,cy,r,0,Math.PI*2);c.strokeStyle=col+'33';c.lineWidth=1;c.stroke();c.beginPath();c.arc(x,y,5,0,Math.PI*2);c.fillStyle=col;c.fill();});}},
+  {n:'Sliding tiles',      f:(c,t,w,h)=>{c.fillStyle='#1c1c2e';c.fillRect(0,0,w,h);const cols=5,rows=3,tw=w/cols,th=h/rows;for(let r=0;r<rows;r++)for(let cl=0;cl<cols;cl++){const ph=r*cols+cl,off=Math.sin(t*2+ph*.6)*4.5;c.fillStyle=`hsl(${(ph*30+t*38)%360},58%,34%)`;c.fillRect(cl*tw+off+2,r*th+2,tw-4,th-4);}}},
+  {n:'Pendulum chain',     f:(c,t,w,h)=>{c.fillStyle='#0a0a0a';c.fillRect(0,0,w,h);let px=w/2,py=h*.15;for(let i=0;i<7;i++){const a=Math.sin(t*(.55+i*.18)+i)*.85,len=25,nx=px+Math.sin(a)*len,ny=py+Math.cos(a)*len;c.beginPath();c.moveTo(px,py);c.lineTo(nx,ny);c.strokeStyle=`hsl(${i*28},72%,62%)`;c.lineWidth=2;c.stroke();c.beginPath();c.arc(nx,ny,4.5,0,Math.PI*2);c.fillStyle=`hsl(${i*28},72%,72%)`;c.fill();px=nx;py=ny;}}},
+  {n:'Pixel rain',         f:(c,t,w,h)=>{c.fillStyle='rgba(0,5,15,.28)';c.fillRect(0,0,w,h);for(let i=0;i<22;i++){const x=(i*w/22+(i*41))%w,y=(t*115+i*h/3)%h;c.fillStyle=`rgba(0,${145+i*4},255,.85)`;c.fillRect(x,y,1.5,7+i%4*3);}}},
+  {n:'Sine ribbons',       f:(c,t,w,h)=>{c.fillStyle='#080818';c.fillRect(0,0,w,h);for(let j=0;j<4;j++){c.beginPath();for(let x=0;x<=w;x+=2){const y=h/2+Math.sin(x*.025+t*(1+j*.4)+j)*h*.25;x===0?c.moveTo(x,y):c.lineTo(x,y);}c.strokeStyle=`hsl(${j*70+t*20},75%,60%)`;c.lineWidth=2;c.stroke();}}},
+  {n:'Bouncing box',       f:(c,t,w,h)=>{c.fillStyle='#0f0f1a';c.fillRect(0,0,w,h);const sz=28,mg=sz,x=mg+(w-mg*2-sz)*((Math.sin(t*1.1)+1)/2),y=mg+(h-mg*2-sz)*((Math.sin(t*.8+1)+1)/2);c.fillStyle='#ff6633';c.fillRect(x,y,sz,sz);}},
+  {n:'Rotating star',      f:(c,t,w,h)=>{c.fillStyle='#0a0a10';c.fillRect(0,0,w,h);const cx=w/2,cy=h/2,R=Math.min(w,h)*.38,r=R*.42,a0=t*1.1;c.beginPath();for(let i=0;i<10;i++){const a=a0+i*Math.PI/5,rd=i%2===0?R:r;c.lineTo(cx+Math.cos(a)*rd,cy+Math.sin(a)*rd);}c.closePath();c.fillStyle='#ffcc00';c.fill();}},
+  {n:'Lissajous curve',    f:(c,t,w,h)=>{c.fillStyle='rgba(5,5,20,.25)';c.fillRect(0,0,w,h);c.beginPath();const cx=w/2,cy=h/2,rx=w*.38,ry=h*.4;for(let i=0;i<=200;i++){const s=i/200*Math.PI*2,x=cx+Math.cos(3*s+t)*rx,y=cy+Math.sin(2*s)*ry;i===0?c.moveTo(x,y):c.lineTo(x,y);}c.strokeStyle=`hsl(${t*40%360},80%,65%)`;c.lineWidth=1.5;c.stroke();}},
+  {n:'Gravity balls',      f:(c,t,w,h)=>{c.fillStyle='#0e0e1c';c.fillRect(0,0,w,h);for(let i=0;i<5;i++){const ph=i*1.26,x=w*(.1+i*.18)+Math.sin(t*(.7+i*.13)+ph)*w*.08,bv=Math.abs(Math.sin(t*(1.2+i*.1)+ph)),y=h*.15+(h*.7)*bv;c.beginPath();c.arc(x,y,10,0,Math.PI*2);c.fillStyle=`hsl(${i*55},80%,58%)`;c.fill();}}},
+  {n:'Clock sweep',        f:(c,t,w,h)=>{c.fillStyle='#0c0c14';c.fillRect(0,0,w,h);const cx=w/2,cy=h/2,R=Math.min(w,h)*.38;c.beginPath();c.arc(cx,cy,R,0,Math.PI*2);c.strokeStyle='#333355';c.lineWidth=2;c.stroke();[[R*.7,t%(Math.PI*2)+3,2,'#ff4455'],[R*.5,t/60%(Math.PI*2)+3,3,'#aabbff']].forEach(([len,a,lw,col])=>{c.beginPath();c.moveTo(cx,cy);c.lineTo(cx+Math.cos(a)*len,cy+Math.sin(a)*len);c.strokeStyle=col;c.lineWidth=lw;c.lineCap='round';c.stroke();});}},
+  {n:'Plasma blobs',       f:(c,t,w,h)=>{c.fillStyle='rgba(5,5,15,.4)';c.fillRect(0,0,w,h);[[.3,.4,55,1.1,'#ff4488'],[.6,.6,45,1.4,'#44aaff'],[.5,.3,50,0.9,'#44ffaa']].forEach(([fx,fy,r,spd,col])=>{const x=w*(fx+Math.sin(t*spd)*.18),y=h*(fy+Math.cos(t*spd*.9)*.18);c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.fillStyle=col+'55';c.fill();});}},
+  {n:'Spiral tracer',      f:(c,t,w,h)=>{c.fillStyle='rgba(5,5,18,.3)';c.fillRect(0,0,w,h);const cx=w/2,cy=h/2,maxR=Math.min(w,h)*.42,r=maxR*(.5+Math.sin(t*.7)*.5),x=cx+Math.cos(t*2)*r,y=cy+Math.sin(t*2)*r;c.beginPath();c.arc(x,y,6,0,Math.PI*2);c.fillStyle='#ff9922';c.fill();c.beginPath();c.arc(cx,cy,maxR,0,Math.PI*2);c.strokeStyle='#333';c.lineWidth=1;c.stroke();}},
+  {n:'Waveform bars',      f:(c,t,w,h)=>{c.fillStyle='#080810';c.fillRect(0,0,w,h);const bars=16,bw=w/bars*.65,gap=w/bars;for(let i=0;i<bars;i++){const bh=h*.12+(h*.72)*((Math.sin(i*.6+t*2)+1)/2),x=i*gap+(gap-bw)/2,y=(h-bh)/2;c.fillStyle=`hsl(${i*13+t*22},75%,55%)`;c.fillRect(x,y,bw,bh);}}},
+  {n:'Meteor shower',      f:(c,t,w,h)=>{c.fillStyle='rgba(2,4,12,.35)';c.fillRect(0,0,w,h);for(let i=0;i<14;i++){const spd=60+i*18,x=((i*w/5+t*spd+i*73)%(w+80))-80,y=(i*h/4+t*spd*.5+i*31)%h;c.beginPath();c.moveTo(x,y);c.lineTo(x+spd*.06,y-spd*.03);c.strokeStyle=`rgba(255,${198+i*3},${100+i*5},.9)`;c.lineWidth=1.5;c.stroke();c.beginPath();c.arc(x,y,1.5,0,Math.PI*2);c.fillStyle='#fff';c.fill();}}}
+];
+
+function makeRenderer(canvas,drawFn,fps){
+  const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height;
+  const rf=Math.min(fps,maxHz),iv=1000/rf;
+  let last=-Infinity,t0=null,id=null;
+  function tick(now){id=requestAnimationFrame(tick);if(!t0)t0=now;if(now-last>=iv-.5){last=now;drawFn(ctx,(now-t0)/1000,w,h);}}
+  id=requestAnimationFrame(tick);return()=>cancelAnimationFrame(id);
+}
+function stopAll(){afs.forEach(f=>f());afs=[];}
+function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=0|Math.random()*(i+1);[b[i],b[j]]=[b[j],b[i]];}return b;}
+function pickPair(){const i=0|Math.random()*(ALLFPS.length-1);return[ALLFPS[i],ALLFPS[i+1]];}
+
+function nextFromPool(pool,si,n){
+  // Return n scene indices, refilling pool if needed
+  const out=[];
+  while(out.length<n){
+    if(si>=pool.length){pool=[...shuffle(pool)];si=0;}
+    out.push(pool[si++]);
+  }
+  return{idxs:out,pool,si};
+}
+
+function buildRounds(){
+  rounds=[];pairRes={};
+  let pool=shuffle(scenes.map((_,i)=>i));
+  let si=0;
+  for(let i=0;i<TOTAL;i++){
+    if(currentMode==='30v60'){
+      const res=nextFromPool(pool,si,4);pool=res.pool;si=res.si;
+      const hot=0|Math.random()*4;
+      rounds.push({type:'oddone',four:res.idxs,hot,lo:30,hi:60,wasCorrect:false,userAnswer:null});
+    }else if(currentMode==='oddone'){
+      const[lo,hi]=pickPair();
+      const res=nextFromPool(pool,si,4);pool=res.pool;si=res.si;
+      const hot=0|Math.random()*4;
+      rounds.push({type:'oddone',four:res.idxs,hot,lo,hi,wasCorrect:false,userAnswer:null});
+    }else{
+      // guess mode: pick the true fps, then build 3 distractors from adjacent values
+      const[lo,hi]=pickPair();
+      const res=nextFromPool(pool,si,1);pool=res.pool;si=res.si;
+      const trueFps=Math.random()>.5?hi:lo;
+      // Build a set of 4 plausible options centred around the pair
+      const pairIdx=ALLFPS.indexOf(lo);
+      const optionSet=new Set([lo,hi]);
+      // Add neighbours for variety
+      if(pairIdx>0)optionSet.add(ALLFPS[pairIdx-1]);
+      if(pairIdx+2<ALLFPS.length)optionSet.add(ALLFPS[pairIdx+2]);
+      // Pad to 4 if needed
+      for(let k=0;k<ALLFPS.length&&optionSet.size<4;k++)optionSet.add(ALLFPS[k]);
+      const options=shuffle([...optionSet]).slice(0,4);
+      // Make sure trueFps is in options
+      if(!options.includes(trueFps)){options[0]=trueFps;}
+      rounds.push({type:'guess',sIdx:res.idxs[0],fps:trueFps,options:shuffle(options),lo,hi,wasCorrect:false,userAnswer:null});
+    }
+  }
+}
+
+function startGame(mode){
+  currentMode=mode;round=0;score=0;streak=0;best=0;pairRes={};stopAll();
+  ['setup','results'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  document.getElementById('game').classList.add('active');
+  buildRounds();showRound();
+}
+
+function sz(c,h){c.width=Math.max(c.parentElement.getBoundingClientRect().width||120,100);c.height=h;}
+
+function showRound(){
+  answered=false;
+  const r=rounds[round];
+  document.getElementById('rlbl').textContent=`Round ${round+1} of ${TOTAL}`;
+  document.getElementById('slbl').textContent=`Score: ${score}`;
+  document.getElementById('pfill').style.width=`${round/TOTAL*100}%`;
+  document.getElementById('fb').style.display='none';
+  document.getElementById('nextrow').style.display='none';
+  stopAll();
+
+  if(r.type==='oddone'){
+    document.getElementById('oddone-area').style.display='';
+    document.getElementById('guess-area').style.display='none';
+    document.getElementById('qtxt').textContent='Which one is the odd one out?';
+    const hiNote=r.hi>maxHz?` (your screen caps at ${maxHz}Hz)`:'';
+    document.getElementById('qhint').textContent=`Three animations run at ${r.lo}fps, one runs at ${r.hi}fps${hiNote}. Find the smoother one.`;
+    const g=document.getElementById('grid4');g.innerHTML='';
+    r.four.forEach((sIdx,pos)=>{
+      const sc=scenes[sIdx],fps=pos===r.hot?r.hi:r.lo;
+      const d=document.createElement('div');d.className='panel';
+      d.innerHTML=`<canvas height="120"></canvas><div class="ptag">${sc.n}</div><div class="plabel">${LABELS[pos]}</div>`;
+      d.onclick=()=>answer(pos);
+      g.appendChild(d);
+      setTimeout(()=>{const cv=d.querySelector('canvas');sz(cv,120);afs.push(makeRenderer(cv,sc.f,fps));},50);
+    });
+  }else{
+    document.getElementById('oddone-area').style.display='none';
+    document.getElementById('guess-area').style.display='';
+    document.getElementById('qtxt').textContent=`What FPS is this running at?`;
+    document.getElementById('qhint').textContent=`Choose from the four options below.`;
+    document.getElementById('stag').textContent=scenes[r.sIdx].n;
+    document.getElementById('gchoices').innerHTML=r.options.map(f=>`<button class="cbtn" onclick="answer(${f})">${f} fps</button>`).join('');
+    setTimeout(()=>{const cs=document.getElementById('cs');sz(cs,180);afs.push(makeRenderer(cs,scenes[r.sIdx].f,r.fps));},50);
+  }
+}
+
+function answer(val){
+  if(answered)return;answered=true;
+  const r=rounds[round];
+  const key=`${r.lo}-${r.hi}`;
+  let ok=false;
+
+  if(r.type==='oddone'){
+    ok=val===r.hot;
+    document.querySelectorAll('#grid4 .panel').forEach((p,i)=>{
+      p.onclick=null;
+      if(i===r.hot)p.classList.add(ok&&val===i?'answered-correct':'reveal-correct');
+      else if(i===val&&!ok)p.classList.add('answered-wrong');
+    });
+    const hiNote=r.hi>maxHz?` Your ${maxHz}Hz screen couldn't render ${r.hi}fps — they may have appeared identical.`:'';
+    showFb(ok,`Panel ${LABELS[r.hot]} (${scenes[r.four[r.hot]].n}) was at ${r.hi}fps. The others were ${r.lo}fps.${hiNote}`);
+  }else{
+    ok=val===r.fps;
+    document.querySelectorAll('#gchoices .cbtn').forEach(b=>{
+      b.disabled=true;
+      const v=parseInt(b.textContent);
+      if(v===r.fps)b.classList.add('correct');
+      else if(v===val&&!ok)b.classList.add('wrong');
+    });
+    const hiNote=r.fps>maxHz?` (your screen caps at ${maxHz}fps)`:'' ;
+    showFb(ok,`It was ${r.fps}fps.${hiNote}`);
+  }
+
+  if(!pairRes[key])pairRes[key]={c:0,t:0};
+  pairRes[key].t++;if(ok){pairRes[key].c++;score++;streak++;best=Math.max(best,streak);}else streak=0;
+  r.wasCorrect=ok;r.userAnswer=val;
+  document.getElementById('slbl').textContent=`Score: ${score}`;
+  document.getElementById('nextrow').style.display='block';
+  document.getElementById('nbtn').textContent=round<TOTAL-1?'Next round \u2192':'See results \u2192';
+}
+
+function showFb(ok,msg){
+  const el=document.getElementById('fb');
+  el.style.display='block';el.className='feedback '+(ok?'correct':'wrong');
+  el.textContent=(ok?'\u2713 Correct. ':'\u2717 Wrong. ')+msg;
+}
+
+function nextRound(){round++;if(round>=TOTAL)showResults();else showRound();}
+
+function sweetSpot(){
+  const pairs=ALLFPS.slice(0,-1).map((lo,i)=>({lo,hi:ALLFPS[i+1],key:`${lo}-${ALLFPS[i+1]}`}));
+  const acc={};pairs.forEach(p=>{const r=pairRes[p.key];acc[p.key]=r?r.c/r.t:null;});
+  const tested=pairs.filter(p=>acc[p.key]!==null);
+  if(!tested.length)return{fps:'?',desc:'Not enough data.',pairs,acc};
+  let ceiling=null;pairs.forEach(p=>{if(acc[p.key]!==null&&acc[p.key]>=.6)ceiling=p.hi;});
+  const blind=pairs.filter(p=>acc[p.key]!==null&&acc[p.key]<.6);
+  let fps,desc;
+  if(!blind.length&&ceiling){fps=ceiling+'fps';desc=`You spotted every tested FPS jump up to ${ceiling}fps. Sharp eyes \u2014 a higher-refresh display would likely make a difference to you.`;}
+  else if(!ceiling){fps='24fps';desc=`You couldn\u2019t reliably tell any tested pairs apart. 24fps may be your practical ceiling, or the motion types just didn\u2019t suit your perception style.`;}
+  else{fps=blind[0].lo+'fps';desc=`You reliably spotted differences up to ${blind[0].lo}fps, but ${blind[0].lo}\u2192${blind[0].hi}fps started to blur. That makes ${blind[0].lo}fps your practical sweet spot.`;}
+  return{fps,desc,pairs,acc};
+}
+
+function showResults(){
+  stopAll();
+  document.getElementById('game').classList.remove('active');
+  document.getElementById('results').classList.add('active');
+
+  const breakdown = rounds.map((r,i)=>{
+    let left,right;
+    if(r.type==='oddone'){
+      const sc=scenes[r.four[r.hot]];
+      left=`R${i+1}: Find ${r.hi}fps among ${r.lo}fps \u00b7 odd one = ${LABELS[r.hot]} (${sc.n})`;
+      right=r.wasCorrect?'Correct':`Wrong (picked ${LABELS[r.userAnswer]})`;
+    }else{
+      left=`R${i+1}: Guess the FPS \u00b7 ${scenes[r.sIdx].n} \u00b7 options: ${r.options.join(', ')}fps`;
+      right=r.wasCorrect?`Correct (${r.fps}fps)`:`Guessed ${r.userAnswer}fps, was ${r.fps}fps`;
+    }
+    return`<div class="brow ${r.wasCorrect?'cr':'wr'}"><span class="bl">${left}</span><span class="br ${r.wasCorrect?'c':'w'}">${right}</span></div>`;
+  }).join('');
+
+  if(currentMode==='30v60'){
+    document.getElementById('res-30v60').style.display='';
+    document.getElementById('res-general').style.display='none';
+    const pct=Math.round(score/TOTAL*100);
+    let verdict,desc;
+    if(pct>=85){verdict='Yes, clearly';desc=`${pct}% correct \u2014 you have no trouble spotting 60fps. The difference is obvious to you.`;}
+    else if(pct>=70){verdict='Usually, yes';desc=`${pct}% correct \u2014 you can usually spot 60fps, but it\u2019s not always obvious. Close to confident.`;}
+    else if(pct>=40){verdict='Sometimes';desc=`${pct}% correct \u2014 some ability to tell them apart, but not consistent enough to be reliable.`;}
+    else{verdict='Not reliably';desc=`${pct}% correct \u2014 near or below chance. You struggled to tell 30fps from 60fps on these animations.`;}
+    document.getElementById('verdict-30v60').textContent=verdict;
+    document.getElementById('desc-30v60').textContent=desc;
+    document.getElementById('rc-30v60').textContent=`${score}/${TOTAL}`;
+    document.getElementById('pct-30v60').textContent=pct+'%';
+    document.getElementById('rs-30v60').textContent=best;
+    document.getElementById('bdown-30v60').innerHTML=breakdown;
+  }else{
+    document.getElementById('res-30v60').style.display='none';
+    document.getElementById('res-general').style.display='';
+    const{fps,desc,pairs,acc}=sweetSpot();
+    document.getElementById('ssval').textContent=fps;
+    document.getElementById('ssdesc').textContent=desc;
+    document.getElementById('rc').textContent=score;
+    document.getElementById('rt').textContent=TOTAL;
+    document.getElementById('rs').textContent=best;
+    document.getElementById('fps-scale').innerHTML=pairs.map(p=>{
+      const a=acc[p.key],above=p.lo>=maxHz;
+      return`<div class="fps-seg ${above?'ab':a===null?'ut':a>=.6?'ct':'nc'}" title="${a!==null?Math.round(a*100)+'%':'untested'}">${p.lo}\u2192${p.hi}</div>`;
+    }).join('');
+    document.getElementById('bdown').innerHTML=breakdown;
+  }
+}
+
+function goHome(){
+  stopAll();['game','results'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  document.getElementById('setup').classList.add('active');
+}
+
+init();
+</script>
+</body>
+</html>
